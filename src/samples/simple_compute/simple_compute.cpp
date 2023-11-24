@@ -4,6 +4,7 @@
 #include <vk_buffers.h>
 #include <vk_utils.h>
 #include <random>
+#include <chrono>
 
 SimpleCompute::SimpleCompute(uint32_t a_length) : m_length(a_length)
 {
