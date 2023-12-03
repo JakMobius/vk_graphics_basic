@@ -21,141 +21,153 @@
 
 class IRenderGUI;
 
-class SimpleShadowmapRender : public IRender
-{
+class SimpleShadowmapRender : public IRender {
 public:
-  SimpleShadowmapRender(uint32_t a_width, uint32_t a_height);
-  ~SimpleShadowmapRender();
+    SimpleShadowmapRender(uint32_t a_width, uint32_t a_height);
 
-  uint32_t     GetWidth()      const override { return m_width; }
-  uint32_t     GetHeight()     const override { return m_height; }
-  VkInstance   GetVkInstance() const override { return m_context->getInstance(); }
+    ~SimpleShadowmapRender();
 
-  void InitVulkan(const char** a_instanceExtensions, uint32_t a_instanceExtensionsCount, uint32_t a_deviceId) override;
+    uint32_t GetWidth() const override { return m_width; }
 
-  void InitPresentation(VkSurfaceKHR &a_surface, bool initGUI) override;
+    uint32_t GetHeight() const override { return m_height; }
 
-  void ProcessInput(const AppInput& input) override;
-  void UpdateCamera(const Camera* cams, uint32_t a_camsNumber) override;
-  Camera GetCurrentCamera() override {return m_cam;}
-  void UpdateView();
+    VkInstance GetVkInstance() const override { return m_context->getInstance(); }
 
-  void LoadScene(const char *path, bool transpose_inst_matrices) override;
-  void DrawFrame(float a_time, DrawMode a_mode) override;
+    void
+    InitVulkan(const char **a_instanceExtensions, uint32_t a_instanceExtensionsCount, uint32_t a_deviceId) override;
+
+    void InitPresentation(VkSurfaceKHR &a_surface, bool initGUI) override;
+
+    void ProcessInput(const AppInput &input) override;
+
+    void UpdateCamera(const Camera *cams, uint32_t a_camsNumber) override;
+
+    Camera GetCurrentCamera() override { return m_cam; }
+
+    void UpdateView();
+
+    void LoadScene(const char *path, bool transpose_inst_matrices) override;
+
+    void DrawFrame(float a_time, DrawMode a_mode) override;
 
 private:
-  etna::GlobalContext* m_context;
-  etna::Image mainViewDepth;
-  etna::Image shadowMap;
-  etna::Sampler defaultSampler;
-  etna::Buffer constants;
+    etna::GlobalContext *m_context;
+    etna::Image mainViewDepth;
+    etna::Image shadowMap;
+    etna::Image soapSource;
+    etna::Image soapTarget;
+    etna::Sampler defaultSampler;
+    etna::Buffer constants;
 
-  VkCommandPool    m_commandPool    = VK_NULL_HANDLE;
+    VkCommandPool m_commandPool = VK_NULL_HANDLE;
 
-  struct
-  {
-    uint32_t    currentFrame      = 0u;
-    VkQueue     queue             = VK_NULL_HANDLE;
-    VkSemaphore imageAvailable    = VK_NULL_HANDLE;
-    VkSemaphore renderingFinished = VK_NULL_HANDLE;
-  } m_presentationResources;
+    struct {
+        uint32_t currentFrame = 0u;
+        VkQueue queue = VK_NULL_HANDLE;
+        VkSemaphore imageAvailable = VK_NULL_HANDLE;
+        VkSemaphore renderingFinished = VK_NULL_HANDLE;
+    } m_presentationResources;
 
-  std::vector<VkFence> m_frameFences;
-  std::vector<VkCommandBuffer> m_cmdBuffersDrawMain;
+    std::vector<VkFence> m_frameFences;
+    std::vector<VkCommandBuffer> m_cmdBuffersDrawMain;
 
-  struct
-  {
-    float4x4 projView;
-    float4x4 model;
-  } pushConst2M;
+    struct {
+        float4x4 projView;
+        float4x4 model;
+    } pushConst2M;
 
-  float4x4 m_worldViewProj;
-  float4x4 m_lightMatrix;    
+    float4x4 m_worldViewProj;
+    float4x4 m_lightMatrix;
 
-  UniformParams m_uniforms {};
-  void* m_uboMappedMem = nullptr;
+    UniformParams m_uniforms{};
+    void *m_uboMappedMem = nullptr;
 
-  etna::GraphicsPipeline m_basicForwardPipeline {};
-  etna::GraphicsPipeline m_shadowPipeline {};
+    etna::ComputePipeline m_soapPipeline{};
+    etna::GraphicsPipeline m_basicForwardPipeline{};
+    etna::GraphicsPipeline m_shadowPipeline{};
 
-  std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
-  
-  VkSurfaceKHR m_surface = VK_NULL_HANDLE;
-  VulkanSwapChain m_swapchain;
+    std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
 
-  Camera   m_cam;
-  uint32_t m_width  = 1024u;
-  uint32_t m_height = 1024u;
-  uint32_t m_framesInFlight = 2u;
-  bool m_vsync = false;
+    VkSurfaceKHR m_surface = VK_NULL_HANDLE;
+    VulkanSwapChain m_swapchain;
 
-  vk::PhysicalDeviceFeatures m_enabledDeviceFeatures = {};
-  std::vector<const char*> m_deviceExtensions;
-  std::vector<const char*> m_instanceExtensions;
+    Camera m_cam;
+    uint32_t m_width = 1024u;
+    uint32_t m_height = 1024u;
+    uint32_t m_framesInFlight = 2u;
+    bool m_vsync = false;
 
-  std::shared_ptr<SceneManager>     m_pScnMgr;
-  std::shared_ptr<IRenderGUI> m_pGUIRender;
-  
-  std::shared_ptr<vk_utils::IQuad>               m_pFSQuad;
-  VkDescriptorSet       m_quadDS; 
-  VkDescriptorSetLayout m_quadDSLayout = nullptr;
+    vk::PhysicalDeviceFeatures m_enabledDeviceFeatures = {};
+    std::vector<const char *> m_deviceExtensions;
+    std::vector<const char *> m_instanceExtensions;
 
-  struct InputControlMouseEtc
-  {
-    bool drawFSQuad = false;
-  } m_input;
+    std::shared_ptr<SceneManager> m_pScnMgr;
+    std::shared_ptr<IRenderGUI> m_pGUIRender;
 
-  /**
-  \brief basic parameters that you usually need for shadow mapping
-  */
-  struct ShadowMapCam
-  {
-    ShadowMapCam() 
-    {  
-      cam.pos    = float3(4.0f, 4.0f, 4.0f);
-      cam.lookAt = float3(0, 0, 0);
-      cam.up     = float3(0, 1, 0);
-  
-      radius          = 5.0f;
-      lightTargetDist = 20.0f;
-      usePerspectiveM = true;
-    }
+    std::shared_ptr<vk_utils::IQuad> m_pFSQuad;
+    VkDescriptorSet m_quadDS;
+    VkDescriptorSetLayout m_quadDSLayout = nullptr;
 
-    float  radius;           ///!< ignored when usePerspectiveM == true 
-    float  lightTargetDist;  ///!< identify depth range
-    Camera cam;              ///!< user control for light to later get light worldViewProj matrix
-    bool   usePerspectiveM;  ///!< use perspective matrix if true and ortographics otherwise
-  
-  } m_light;
- 
-  void DrawFrameSimple(bool draw_gui);
+    struct InputControlMouseEtc {
+        bool drawFSQuad = false;
+    } m_input;
 
-  void CreateInstance();
-  void CreateDevice(uint32_t a_deviceId);
+    /**
+    \brief basic parameters that you usually need for shadow mapping
+    */
+    struct ShadowMapCam {
+        ShadowMapCam() {
+            cam.pos = float3(4.0f, 4.0f, 4.0f);
+            cam.lookAt = float3(0, 0, 0);
+            cam.up = float3(0, 1, 0);
 
-  void BuildCommandBufferSimple(VkCommandBuffer a_cmdBuff, VkImage a_targetImage, VkImageView a_targetImageView);
+            radius = 5.0f;
+            lightTargetDist = 20.0f;
+            usePerspectiveM = true;
+        }
 
-  void DrawSceneCmd(VkCommandBuffer a_cmdBuff, const float4x4& a_wvp, VkPipelineLayout a_pipelineLayout = VK_NULL_HANDLE);
+        float radius;           ///!< ignored when usePerspectiveM == true
+        float lightTargetDist;  ///!< identify depth range
+        Camera cam;              ///!< user control for light to later get light worldViewProj matrix
+        bool usePerspectiveM;  ///!< use perspective matrix if true and ortographics otherwise
 
-  void loadShaders();
+    } m_light;
 
-  void SetupSimplePipeline();
-  void RecreateSwapChain();
+    void DrawFrameSimple(bool draw_gui);
 
-  void UpdateUniformBuffer(float a_time);
+    void CreateInstance();
+
+    void CreateDevice(uint32_t a_deviceId);
+
+    void BuildCommandBufferSimple(VkCommandBuffer a_cmdBuff, VkImage a_targetImage, VkImageView a_targetImageView);
+
+    void
+    DrawSceneCmd(VkCommandBuffer a_cmdBuff, const float4x4 &a_wvp, VkPipelineLayout a_pipelineLayout = VK_NULL_HANDLE);
+
+    void loadShaders();
+
+    void SetupSimplePipeline();
+
+    void RecreateSwapChain();
+
+    void UpdateUniformBuffer(float a_time);
 
 
-  void SetupDeviceExtensions();
+    void SetupDeviceExtensions();
 
-  void AllocateResources();
-  void PreparePipelines();
+    void AllocateResources();
 
-  void DestroyPipelines();
-  void DeallocateResources();
+    void PreparePipelines();
 
-  void InitPresentStuff();
-  void ResetPresentStuff();
-  void SetupGUIElements();
+    void DestroyPipelines();
+
+    void DeallocateResources();
+
+    void InitPresentStuff();
+
+    void ResetPresentStuff();
+
+    void SetupGUIElements();
 };
 
 

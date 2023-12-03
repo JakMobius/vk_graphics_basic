@@ -1,0 +1,55 @@
+#version 430
+
+#define CORE_SIZE 11
+#define CORE_HALF_SIZE 5
+
+layout (local_size_x = CORE_SIZE, local_size_y = CORE_SIZE) in;
+
+layout (rgba8, binding = 0) uniform image2D sourceImg;
+layout (rgba8, binding = 1) uniform image2D targetImg;
+
+shared vec4 sharedBuffer[CORE_SIZE][CORE_SIZE];
+shared float blurCore[11];
+
+const float pi = 3.1416;
+
+void main()
+{
+    ivec2 pixelCoords = ivec2(gl_WorkGroupID.xy);
+    ivec2 offsetCoords = ivec2(gl_LocalInvocationID.xy);
+
+    float blur_c1 = 10, blur_c2 = 10;
+
+    ivec2 centerOffset = offsetCoords - CORE_HALF_SIZE;
+
+    if (offsetCoords.y == 0) {
+        blurCore[offsetCoords.x] =
+        exp(-1 * (centerOffset.x * centerOffset.x) / blur_c1) / sqrt(pi * blur_c2);
+    }
+
+    sharedBuffer[offsetCoords.x][offsetCoords.y] = imageLoad(sourceImg, ivec2(pixelCoords) + centerOffset);
+
+    barrier();
+
+    if (offsetCoords.x == 0)
+    {
+        vec4 accumulator = vec4(0.0);
+
+        for (int x = 0; x < CORE_SIZE; x++)
+        accumulator += sharedBuffer[x][offsetCoords.y] * blurCore[x];
+
+        sharedBuffer[0][offsetCoords.y] = accumulator;
+    }
+
+    barrier();
+
+    if (offsetCoords.x == 0 && offsetCoords.y == 0)
+    {
+        vec4 accumulator = vec4(0.0);
+
+        for (int y = 0; y < CORE_SIZE; y++)
+        accumulator += sharedBuffer[0][y] * blurCore[y];
+
+        imageStore(targetImg, pixelCoords, accumulator);
+    }
+}
