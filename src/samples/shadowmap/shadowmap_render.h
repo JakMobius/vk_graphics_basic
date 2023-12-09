@@ -45,7 +45,10 @@ public:
 
 private:
   etna::GlobalContext* m_context;
-  etna::Image mainViewDepth;
+  etna::Image gBufferDepths;
+  etna::Image gBufferCoords;
+  etna::Image gBufferNormals;
+  etna::Image lightningPassViewDepth;
   etna::Image shadowMap;
   etna::Sampler defaultSampler;
   etna::Buffer constants;
@@ -75,7 +78,8 @@ private:
   UniformParams m_uniforms {};
   void* m_uboMappedMem = nullptr;
 
-  etna::GraphicsPipeline m_basicForwardPipeline {};
+  etna::GraphicsPipeline m_gPassPipeline{};
+  etna::GraphicsPipeline m_lightningPassPipeline{};
   etna::GraphicsPipeline m_shadowPipeline {};
 
   std::shared_ptr<vk_utils::DescriptorMaker> m_pBindings = nullptr;
